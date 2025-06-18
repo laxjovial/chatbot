@@ -9,6 +9,7 @@ import datetime
 import subprocess
 import sys
 from io import BytesIO
+import matplotlib.pyplot as plt
 
 # === Ensure NLTK and matplotlib are installed ===
 import nltk
@@ -20,11 +21,6 @@ try:
 except LookupError:
     nltk.download('punkt')
 
-try:
-    import matplotlib.pyplot as plt
-except ModuleNotFoundError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
-    import matplotlib.pyplot as plt
 
 from difflib import get_close_matches
 
