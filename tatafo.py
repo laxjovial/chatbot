@@ -11,15 +11,6 @@ import sys
 from io import BytesIO
 
 # === Ensure NLTK and matplotlib are installed ===
-try:
-    import nltk
-    from nltk.tokenize import word_tokenize
-    nltk.data.find('tokenizers/punkt')
-except (ModuleNotFoundError, LookupError):
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'nltk'])
-    import nltk
-    nltk.download('punkt')
-    from nltk.tokenize import word_tokenize
 
 try:
     import matplotlib.pyplot as plt
