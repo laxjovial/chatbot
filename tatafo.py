@@ -215,9 +215,3 @@ if st.sidebar.checkbox("\ud83d\udcdc Show Chat History"):
     for entry in data["history"]:
         st.sidebar.write(f"**You:** {entry['user']}")
         st.sidebar.write(f"**Bot:** {entry['bot']}")
-
-if st.sidebar.checkbox("📜 Show Chat History"):
-    st.sidebar.markdown("---")
-    for entry in data["history"]:
-        st.sidebar.write(f"**You:** {entry['user']}")
-        st.sidebar.write(f"**Bot:** {entry['bot']}")
