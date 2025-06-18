@@ -49,17 +49,32 @@ def get_default_responses():
     }
 
 # === Handle User Input ===
+from nltk.tokenize import PunktSentenceTokenizer, word_tokenize
+from difflib import get_close_matches
+
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
-    tokens = word_tokenize(text)
-    matched = get_close_matches(text, list(data["custom_responses"].keys()) + list(get_default_responses().keys()), n=1, cutoff=0.6)
+
+    # Manually tokenize using Punkt to avoid broken punkt_tab path issue
+    tokenizer = PunktSentenceTokenizer()
+    sentences = tokenizer.tokenize(text)
+    tokens = []
+    for sent in sentences:
+        tokens.extend(word_tokenize(sent))
+
+    matched = get_close_matches(
+        text,
+        list(data["custom_responses"].keys()) + list(get_default_responses().keys()),
+        n=1,
+        cutoff=0.6
+    )
 
     if matched:
         if matched[0] in data["custom_responses"]:
             return data["custom_responses"][matched[0]]
         return get_default_responses()[matched[0]]
 
-    # Check for keywords
+    # Keyword checks
     if "weather" in tokens:
         return get_weather(text, api_keys.get("weather"))
     elif "news" in tokens:
@@ -74,6 +89,7 @@ def generate_response(user_input, data, api_keys):
         return get_wikipedia_summary(text)
 
     return "I'm not sure how to respond to that yet."
+
 
 # === Weather API ===
 def get_weather(text, key):
