@@ -12,10 +12,11 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 
 # === Ensure NLTK and matplotlib are installed ===
+
 import nltk
 from nltk.tokenize import word_tokenize
 
-# Download NLTK tokenizer model if not available
+# Ensure punkt tokenizer is available
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
