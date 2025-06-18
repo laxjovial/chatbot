@@ -147,10 +147,10 @@ def get_sports_info(text, key):
 
 # === Streamlit App ===
 st.set_page_config(page_title="ChatBot App", layout="centered")
-st.title("\ud83d\udcf1 AI ChatBot App")
+st.title("Tatafo with AI 🗣️")
 
 # === API Key Management ===
-st.sidebar.title("\ud83d\udd11 API Key Setup")
+st.sidebar.title("🔑 API Key Setup")
 api_keys = {}
 
 def handle_api_keys():
