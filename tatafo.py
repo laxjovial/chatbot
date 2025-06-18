@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 # === Ensure NLTK and matplotlib are installed ===
 
 import nltk
-from nltk.tokenize import word_tokenize
 
 # Ensure punkt tokenizer is available
 try:
@@ -49,18 +48,20 @@ def get_default_responses():
     }
 
 # === Handle User Input ===
-from nltk.tokenize import PunktSentenceTokenizer, word_tokenize
+from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
 from difflib import get_close_matches
+
+# Create tokenizer instances once (outside function if you want to reuse)
+sent_tokenizer = PunktSentenceTokenizer()
+word_tokenizer = TreebankWordTokenizer()
 
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
 
-    # Manually tokenize using Punkt to avoid broken punkt_tab path issue
-    tokenizer = PunktSentenceTokenizer()
-    sentences = tokenizer.tokenize(text)
+    # Use Punkt for sentence splitting and Treebank for word tokenization
     tokens = []
-    for sent in sentences:
-        tokens.extend(word_tokenize(sent))
+    for sent in sent_tokenizer.tokenize(text):
+        tokens.extend(word_tokenizer.tokenize(sent))
 
     matched = get_close_matches(
         text,
@@ -79,13 +80,13 @@ def generate_response(user_input, data, api_keys):
         return get_weather(text, api_keys.get("weather"))
     elif "news" in tokens:
         return get_news(api_keys.get("news"))
-    elif any(word in text for word in ["price", "bitcoin", "crypto"]):
+    elif any(word in tokens for word in ["price", "bitcoin", "crypto"]):
         return get_crypto_price(text, api_keys.get("crypto"))
-    elif any(word in text for word in ["stock", "shares", "company"]):
+    elif any(word in tokens for word in ["stock", "shares", "company"]):
         return get_stock_price(text, api_keys.get("stock"))
-    elif any(word in text for word in ["ronaldo", "match", "messi", "lebron", "haaland"]):
+    elif any(word in tokens for word in ["ronaldo", "match", "messi", "lebron", "haaland"]):
         return get_sports_info(text, api_keys.get("sports"))
-    elif "wikipedia" in text or text.startswith("who") or text.startswith("what"):
+    elif "wikipedia" in tokens or text.startswith("who") or text.startswith("what"):
         return get_wikipedia_summary(text)
 
     return "I'm not sure how to respond to that yet."
