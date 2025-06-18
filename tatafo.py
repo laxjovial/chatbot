@@ -176,7 +176,7 @@ def handle_api_keys():
             with open("api_keys.txt", "w") as f:
                 for k, v in api_keys.items():
                     f.write(f"{k}={v}\n")
-            st.sidebar.success("\ud83d\udd10 Keys saved to api_keys.txt")
+            st.sidebar.success("✅ Keys saved to api_keys.txt")
 
 handle_api_keys()
 
