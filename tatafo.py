@@ -190,7 +190,7 @@ if user_input:
 
 # === Add Custom Response ===
 st.sidebar.markdown("---")
-st.sidebar.subheader("\u2795 Add Custom Response")
+st.sidebar.subheader("🤝 Add Custom Response")
 new_key = st.sidebar.text_input("Trigger phrase")
 new_resp = st.sidebar.text_area("Bot's response")
 if st.sidebar.button("Add Response"):
@@ -200,12 +200,12 @@ if st.sidebar.button("Add Response"):
         st.sidebar.success("Added!")
 
 # === View/Reset History ===
-if st.sidebar.button("\ud83e\ude79 Clear Chat History"):
+if st.sidebar.button("❌ Clear Chat History"):
     data["history"] = []
     save_data(data)
     st.sidebar.success("Chat history cleared.")
 
-if st.sidebar.checkbox("\ud83d\udcdc Show Chat History"):
+if st.sidebar.checkbox("📓 Show Chat History"):
     st.sidebar.markdown("---")
     for entry in data["history"]:
         st.sidebar.write(f"**You:** {entry['user']}")
