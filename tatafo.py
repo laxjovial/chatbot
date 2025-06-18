@@ -11,6 +11,14 @@ import sys
 from io import BytesIO
 
 # === Ensure NLTK and matplotlib are installed ===
+import nltk
+from nltk.tokenize import word_tokenize
+
+# Download NLTK tokenizer model if not available
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
 try:
     import matplotlib.pyplot as plt
