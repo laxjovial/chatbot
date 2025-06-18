@@ -92,11 +92,22 @@ def get_news(key):
 
 def get_wikipedia_summary(query):
     try:
-        term = query.split(" ")[-1]
-        res = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{term}").json()
-        return res.get("extract", "Wikipedia article not found.")
-    except:
-        return "Wikipedia lookup failed."
+        # Clean the query to remove common prefixes
+        query = query.lower().strip()
+        query = re.sub(r"^(who|what|where|when|how)( is| was| are| does| do| did)?", "", query).strip()
+        query = query if query else "Python (programming language)"
+
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.replace(' ', '_')}"
+        res = requests.get(url).json()
+
+        if "title" in res and res["title"].lower() == "not found":
+            return f"Sorry, I couldn't find anything useful on Wikipedia for '{query}'."
+        if "extract" in res:
+            return res["extract"]
+        return "Wikipedia article not found or has no summary."
+    except Exception as e:
+        return f"Wikipedia lookup failed: {str(e)}"
+
 
 def get_crypto_price(text, key):
     if not key:
@@ -167,18 +178,25 @@ def plot_stock_chart(df):
 sent_tokenizer = PunktSentenceTokenizer()
 word_tokenizer = TreebankWordTokenizer()
 
+# === Chatbot Core ===
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
     tokens = []
     for sent in sent_tokenizer.tokenize(text):
         tokens.extend(word_tokenizer.tokenize(sent))
 
-    matched = get_close_matches(text, list(data["custom_responses"].keys()) + list(get_default_responses().keys()), n=1, cutoff=0.6)
+    matched = get_close_matches(
+        text,
+        list(data["custom_responses"].keys()) + list(get_default_responses().keys()),
+        n=1,
+        cutoff=0.6
+    )
     if matched:
         if matched[0] in data["custom_responses"]:
             return data["custom_responses"][matched[0]]
         return get_default_responses()[matched[0]]
 
+    # Keyword triggers
     if "weather" in tokens:
         return get_weather(text, api_keys.get("weather"))
     elif "news" in tokens:
@@ -190,11 +208,13 @@ def generate_response(user_input, data, api_keys):
     elif any(w in tokens for w in ["ronaldo", "messi", "match", "haaland", "lebron"]):
         return get_sports_info(text, api_keys.get("sports"))
 
+    # Entity extraction for Wikipedia fallback
     entities = extract_named_entities(user_input)
     if entities:
         return get_wikipedia_summary(entities[0])
 
-    return "I'm not sure how to respond to that yet."
+    # Absolute fallback: try full user input as Wikipedia term
+    return get_wikipedia_summary(user_input)
 
 # === Streamlit UI ===
 st.set_page_config(page_title="ChatBot App", layout="centered")
