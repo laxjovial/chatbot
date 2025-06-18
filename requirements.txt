@@ -2,3 +2,4 @@ streamlit
 nltk
 matplotlib
 requests
+pandas
