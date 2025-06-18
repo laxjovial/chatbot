@@ -6,17 +6,28 @@ import os
 import re
 import requests
 import datetime
-import matplotlib.pyplot as plt
+import subprocess
+import sys
 from io import BytesIO
-import nltk
-from nltk.tokenize import word_tokenize
-from difflib import get_close_matches
 
-# Download required NLTK data if not already available
+# === Ensure NLTK and matplotlib are installed ===
 try:
+    import nltk
+    from nltk.tokenize import word_tokenize
     nltk.data.find('tokenizers/punkt')
-except LookupError:
+except (ModuleNotFoundError, LookupError):
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'nltk'])
+    import nltk
     nltk.download('punkt')
+    from nltk.tokenize import word_tokenize
+
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "matplotlib"])
+    import matplotlib.pyplot as plt
+
+from difflib import get_close_matches
 
 # === Load Default Responses and Chat History ===
 def load_data():
@@ -44,15 +55,7 @@ def get_default_responses():
 # === Handle User Input ===
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
-    try:
-        tokens = word_tokenize(text)
-    except LookupError:
-        nltk.download('punkt')
-        try:
-            tokens = word_tokenize(text)
-        except Exception:
-            tokens = text.split()  # fallback if tokenization still fails
-
+    tokens = word_tokenize(text)
     matched = get_close_matches(text, list(data["custom_responses"].keys()) + list(get_default_responses().keys()), n=1, cutoff=0.6)
 
     if matched:
@@ -148,11 +151,11 @@ def get_sports_info(text, key):
     return f"(Demo) Sports info for: {text}"
 
 # === Streamlit App ===
-st.set_page_config(page_title="ChatBot", layout="centered")
-st.title("📱 TATAFO")
+st.set_page_config(page_title="ChatBot App", layout="centered")
+st.title("\ud83d\udcf1 AI ChatBot App")
 
 # === API Key Management ===
-st.sidebar.title("🔑 API Key Setup")
+st.sidebar.title("\ud83d\udd11 API Key Setup")
 api_keys = {}
 
 def handle_api_keys():
@@ -165,7 +168,7 @@ def handle_api_keys():
                 if "=" in line:
                     k, v = line.strip().split("=")
                     api_keys[k.strip()] = v.strip()
-            st.sidebar.success("✅ API keys loaded from file.")
+            st.sidebar.success("\u2705 API keys loaded from file.")
     elif mode == "Manual input":
         api_keys["weather"] = st.sidebar.text_input("Weather API Key")
         api_keys["news"] = st.sidebar.text_input("News API Key")
@@ -177,7 +180,7 @@ def handle_api_keys():
             with open("api_keys.txt", "w") as f:
                 for k, v in api_keys.items():
                     f.write(f"{k}={v}\n")
-            st.sidebar.success("🔐 Keys saved to api_keys.txt")
+            st.sidebar.success("\ud83d\udd10 Keys saved to api_keys.txt")
 
 handle_api_keys()
 
@@ -192,7 +195,7 @@ if user_input:
 
 # === Add Custom Response ===
 st.sidebar.markdown("---")
-st.sidebar.subheader("➕ Add Custom Response")
+st.sidebar.subheader("\u2795 Add Custom Response")
 new_key = st.sidebar.text_input("Trigger phrase")
 new_resp = st.sidebar.text_area("Bot's response")
 if st.sidebar.button("Add Response"):
@@ -202,10 +205,16 @@ if st.sidebar.button("Add Response"):
         st.sidebar.success("Added!")
 
 # === View/Reset History ===
-if st.sidebar.button("🧹 Clear Chat History"):
+if st.sidebar.button("\ud83e\ude79 Clear Chat History"):
     data["history"] = []
     save_data(data)
     st.sidebar.success("Chat history cleared.")
+
+if st.sidebar.checkbox("\ud83d\udcdc Show Chat History"):
+    st.sidebar.markdown("---")
+    for entry in data["history"]:
+        st.sidebar.write(f"**You:** {entry['user']}")
+        st.sidebar.write(f"**Bot:** {entry['bot']}")
 
 if st.sidebar.checkbox("📜 Show Chat History"):
     st.sidebar.markdown("---")
