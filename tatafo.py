@@ -10,21 +10,37 @@ import subprocess
 import sys
 from io import BytesIO
 import matplotlib.pyplot as plt
-
-# === Ensure NLTK and matplotlib are installed ===
-
+import pandas as pd
 import nltk
+from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
+from nltk import ne_chunk, pos_tag, word_tokenize
+from nltk.tree import Tree
+from difflib import get_close_matches
 
-# Ensure punkt tokenizer is available
+# Ensure NLTK data is downloaded
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
     nltk.download('punkt')
 
+for pkg in ['averaged_perceptron_tagger', 'maxent_ne_chunker', 'words']:
+    try:
+        nltk.data.find(f'taggers/{pkg}' if "tagger" in pkg else f'chunkers/{pkg}' if "chunker" in pkg else f'corpora/{pkg}')
+    except LookupError:
+        nltk.download(pkg)
 
-from difflib import get_close_matches
+# === Entity Detection ===
+def extract_named_entities(text):
+    entities = []
+    for sent in nltk.sent_tokenize(text):
+        chunks = ne_chunk(pos_tag(word_tokenize(sent)))
+        for chunk in chunks:
+            if isinstance(chunk, Tree):
+                name = " ".join(c[0] for c in chunk.leaves())
+                entities.append(name)
+    return entities
 
-# === Load Default Responses and Chat History ===
+# === Load/Save Data ===
 def load_data():
     if os.path.exists("chatbot_data.json"):
         with open("chatbot_data.json", "r") as f:
@@ -35,7 +51,6 @@ def save_data(data):
     with open("chatbot_data.json", "w") as f:
         json.dump(data, f, indent=4)
 
-# === Default Responses ===
 def get_default_responses():
     return {
         "hi": "Hello! How can I assist you?",
@@ -47,52 +62,7 @@ def get_default_responses():
         "where are you learning data science": "Sail Innovation Lab."
     }
 
-# === Handle User Input ===
-from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
-from difflib import get_close_matches
-
-# Create tokenizer instances once (outside function if you want to reuse)
-sent_tokenizer = PunktSentenceTokenizer()
-word_tokenizer = TreebankWordTokenizer()
-
-def generate_response(user_input, data, api_keys):
-    text = user_input.lower().strip()
-
-    # Use Punkt for sentence splitting and Treebank for word tokenization
-    tokens = []
-    for sent in sent_tokenizer.tokenize(text):
-        tokens.extend(word_tokenizer.tokenize(sent))
-
-    matched = get_close_matches(
-        text,
-        list(data["custom_responses"].keys()) + list(get_default_responses().keys()),
-        n=1,
-        cutoff=0.6
-    )
-
-    if matched:
-        if matched[0] in data["custom_responses"]:
-            return data["custom_responses"][matched[0]]
-        return get_default_responses()[matched[0]]
-
-    # Keyword checks
-    if "weather" in tokens:
-        return get_weather(text, api_keys.get("weather"))
-    elif "news" in tokens:
-        return get_news(api_keys.get("news"))
-    elif any(word in tokens for word in ["price", "bitcoin", "crypto"]):
-        return get_crypto_price(text, api_keys.get("crypto"))
-    elif any(word in tokens for word in ["stock", "shares", "company"]):
-        return get_stock_price(text, api_keys.get("stock"))
-    elif any(word in tokens for word in ["ronaldo", "match", "messi", "lebron", "haaland"]):
-        return get_sports_info(text, api_keys.get("sports"))
-    elif "wikipedia" in tokens or text.startswith("who") or text.startswith("what"):
-        return get_wikipedia_summary(text)
-
-    return "I'm not sure how to respond to that yet."
-
-
-# === Weather API ===
+# === API and Info ===
 def get_weather(text, key):
     if not key:
         return "No weather API key set."
@@ -109,7 +79,6 @@ def get_weather(text, key):
     except Exception as e:
         return f"Weather lookup failed: {str(e)}"
 
-# === News API ===
 def get_news(key):
     if not key:
         return "No news API key set."
@@ -121,15 +90,14 @@ def get_news(key):
     except Exception as e:
         return f"News lookup failed: {str(e)}"
 
-# === Wikipedia ===
 def get_wikipedia_summary(query):
     try:
-        res = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.split()[-1]}").json()
+        term = query.split(" ")[-1]
+        res = requests.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{term}").json()
         return res.get("extract", "Wikipedia article not found.")
     except:
         return "Wikipedia lookup failed."
 
-# === Crypto ===
 def get_crypto_price(text, key):
     if not key:
         return "No crypto API key set."
@@ -143,7 +111,6 @@ def get_crypto_price(text, key):
     except:
         return "Crypto lookup failed."
 
-# === Stocks ===
 def get_stock_price(text, key):
     if not key:
         return "No stock API key set."
@@ -157,18 +124,83 @@ def get_stock_price(text, key):
     except:
         return "Stock lookup failed."
 
-# === Sports ===
 def get_sports_info(text, key):
     if not key:
         return "No sports API key set."
     return f"(Demo) Sports info for: {text}"
 
-# === Streamlit App ===
+def handle_csv_upload():
+    uploaded_file = st.sidebar.file_uploader("Upload your stock CSV file", type="csv")
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+        st.success("CSV uploaded and loaded.")
+        return df
+    if st.sidebar.button("Fetch Sample CSV"):
+        url = "https://query1.finance.yahoo.com/v7/finance/download/AAPL?period1=1663372800&period2=1694908800&interval=1d&events=history"
+        try:
+            res = requests.get(url)
+            df = pd.read_csv(BytesIO(res.content))
+            st.success("Sample CSV fetched from Yahoo.")
+            return df
+        except:
+            st.error("Failed to fetch sample CSV.")
+    return None
+
+def plot_stock_chart(df):
+    st.subheader("Stock Price Chart")
+    if df is not None:
+        start = st.date_input("Start Date", value=pd.to_datetime(df['Date'].min()))
+        end = st.date_input("End Date", value=pd.to_datetime(df['Date'].max()))
+        if start <= end:
+            mask = (pd.to_datetime(df['Date']) >= start) & (pd.to_datetime(df['Date']) <= end)
+            filtered = df.loc[mask]
+            fig, ax = plt.subplots()
+            ax.plot(filtered['Date'], filtered['Close'], label='Close Price')
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Close Price")
+            ax.set_title("Stock Price Over Time")
+            st.pyplot(fig)
+        else:
+            st.warning("Start date must be before end date.")
+
+# === Chatbot Core ===
+sent_tokenizer = PunktSentenceTokenizer()
+word_tokenizer = TreebankWordTokenizer()
+
+def generate_response(user_input, data, api_keys):
+    text = user_input.lower().strip()
+    tokens = []
+    for sent in sent_tokenizer.tokenize(text):
+        tokens.extend(word_tokenizer.tokenize(sent))
+
+    matched = get_close_matches(text, list(data["custom_responses"].keys()) + list(get_default_responses().keys()), n=1, cutoff=0.6)
+    if matched:
+        if matched[0] in data["custom_responses"]:
+            return data["custom_responses"][matched[0]]
+        return get_default_responses()[matched[0]]
+
+    if "weather" in tokens:
+        return get_weather(text, api_keys.get("weather"))
+    elif "news" in tokens:
+        return get_news(api_keys.get("news"))
+    elif any(w in tokens for w in ["price", "crypto", "bitcoin"]):
+        return get_crypto_price(text, api_keys.get("crypto"))
+    elif any(w in tokens for w in ["stock", "shares", "company"]):
+        return get_stock_price(text, api_keys.get("stock"))
+    elif any(w in tokens for w in ["ronaldo", "messi", "match", "haaland", "lebron"]):
+        return get_sports_info(text, api_keys.get("sports"))
+
+    entities = extract_named_entities(user_input)
+    if entities:
+        return get_wikipedia_summary(entities[0])
+
+    return "I'm not sure how to respond to that yet."
+
+# === Streamlit UI ===
 st.set_page_config(page_title="ChatBot App", layout="centered")
 st.title("Tatafo with AI 🗣️")
 
-# === API Key Management ===
-st.sidebar.title("🔑 API Key Setup")
+st.sidebar.title("\U0001F511 API Input")
 api_keys = {}
 
 def handle_api_keys():
@@ -197,7 +229,7 @@ def handle_api_keys():
 
 handle_api_keys()
 
-# === Chat System ===
+# === Main Interaction ===
 data = load_data()
 user_input = st.text_input("You:")
 if user_input:
@@ -206,7 +238,7 @@ if user_input:
     save_data(data)
     st.write(f"**Bot:** {response}")
 
-# === Add Custom Response ===
+# === Custom Commands ===
 st.sidebar.markdown("---")
 st.sidebar.subheader("🤝 Add Custom Response")
 new_key = st.sidebar.text_input("Trigger phrase")
@@ -217,7 +249,7 @@ if st.sidebar.button("Add Response"):
         save_data(data)
         st.sidebar.success("Added!")
 
-# === View/Reset History ===
+# === History ===
 if st.sidebar.button("❌ Clear Chat History"):
     data["history"] = []
     save_data(data)
@@ -228,3 +260,8 @@ if st.sidebar.checkbox("📓 Show Chat History"):
     for entry in data["history"]:
         st.sidebar.write(f"**You:** {entry['user']}")
         st.sidebar.write(f"**Bot:** {entry['bot']}")
+
+# === Stock Upload & Chart ===
+df_stock = handle_csv_upload()
+if df_stock is not None:
+    plot_stock_chart(df_stock)
