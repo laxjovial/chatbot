@@ -51,7 +51,7 @@ def get_default_responses():
 # === Handle User Input ===
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
-    tokens = word_tokenize(text, language="english")
+    tokens = word_tokenize(text)
     matched = get_close_matches(text, list(data["custom_responses"].keys()) + list(get_default_responses().keys()), n=1, cutoff=0.6)
 
     if matched:
