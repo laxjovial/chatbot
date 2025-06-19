@@ -21,17 +21,6 @@ from nltk import ne_chunk, pos_tag, word_tokenize
 from nltk.tree import Tree
 from difflib import get_close_matches
 
-# === NLTK Setup (cached) ===
-NLTK_PATH = os.path.join(os.getcwd(), 'nltk_data')
-nltk.data.path.append(NLTK_PATH)
-
-REQUIRED_NLTK = {
-    'punkt': 'tokenizers/punkt',
-    'averaged_perceptron_tagger': 'taggers/averaged_perceptron_tagger',
-    'maxent_ne_chunker': 'chunkers/maxent_ne_chunker',
-    'words': 'corpora/words'
-}
-
 # === Entity Detection ===
 def extract_named_entities(text):
     entities = []
