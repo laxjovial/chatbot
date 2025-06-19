@@ -16,10 +16,22 @@ import spacy
 nlp = spacy.load("en_core_web_sm")  # Load spaCy's English model
 
 # === Entity Detection ===
+import spacy
+
+# Load English transformer and multilingual model
+nlp_en = spacy.load("en_core_web_trf")
+nlp_multi = spacy.load("xx_ent_wiki_sm")
+
+# Example: switch based on input language or fallback
 def extract_named_entities(text):
-    doc = nlp(text)
-    entities = [ent.text for ent in doc.ents]
-    return entities
+    try:
+        doc = nlp_en(text)  # Use high-accuracy English transformer
+        if not doc.ents:  # Fallback to multilingual if no entities found
+            doc = nlp_multi(text)
+        return [ent.text for ent in doc.ents]
+    except Exception as e:
+        return []
+
 
 # === Load/Save Data ===
 def load_data():
