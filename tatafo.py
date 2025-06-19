@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import nltk
 import nltk
-nltk.data.path.append("nltk_data")  # Ensures it uses local path
+nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
+  # Ensures it uses local path
 
 from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
 from nltk import ne_chunk, pos_tag, word_tokenize
@@ -30,13 +31,6 @@ REQUIRED_NLTK = {
     'maxent_ne_chunker': 'chunkers/maxent_ne_chunker',
     'words': 'corpora/words'
 }
-
-def ensure_nltk_data():
-    for pkg, path in REQUIRED_NLTK.items():
-        try:
-            nltk.data.find(path)
-        except LookupError:
-            nltk.download(pkg, download_dir=NLTK_PATH)
 
 # === Entity Detection ===
 def extract_named_entities(text):
