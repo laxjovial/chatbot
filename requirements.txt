@@ -1,7 +1,8 @@
 streamlit
-requests
 pandas
-matplotlib
-spacy
+requests
 langdetect
-pydantic
+spacy
+en-core-web-trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.1/en_core_web_trf-3.7.1.tar.gz
+xx-ent-wiki-sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.7.1/xx_ent_wiki_sm-3.7.1.tar.gz
+plotly
