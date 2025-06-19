@@ -1,10 +1,9 @@
 streamlit
-nltk
 requests
-matplotlib
 pandas
-numpy
+matplotlib
 spacy
-en-core-web-trf @ https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.7.1/en_core_web_trf-3.7.1-py3-none-any.whl
-xx-ent-wiki-sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.7.0/xx_ent_wiki_sm-3.7.0-py3-none-any.whl
 langdetect
+fastapi
+uvicorn
+pydantic
