@@ -1,7 +1,17 @@
 services:
   - type: web
-    name: chatbot
+    name: chatbot-streamlit
     env: python
-    pythonVersion: 3.10
-    buildCommand: "bash build.sh"
-    startCommand: "streamlit run chatbot_app.py"
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: streamlit run chatbot_app.py --server.port $PORT
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "10000"
+  - type: web
+    name: nlp-fastapi
+    env: python
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: uvicorn fastapi_backend:app --host 0.0.0.0 --port 8000
