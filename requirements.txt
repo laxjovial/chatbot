@@ -1,7 +1,7 @@
-streamlit==1.35.0 
-nltk==3.8.1 --only-binary=:all:
-requests==2.31.0
-matplotlib==3.7.1 --only-binary=:all:
-pandas==1.5.3 --only-binary=:all:
-numpy==1.26.4 --only-binary=:all:
+streamlit
+nltk
+requests
+matplotlib
+pandas
+numpy
 
