@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Create a local directory for nltk_data
-mkdir -p nltk_data
+# Optional: remove NLTK data if not needed anymore
+rm -rf nltk_data
 
-# Download punkt directly to nltk_data folder (no need for separate nltk_setup.py)
-python -m nltk.downloader -d nltk_data punkt
-
-# Install all Python dependencies
+# Install dependencies
 pip install -r requirements.txt
+
+# Download spaCy model
+python -m spacy download en_core_web_sm
