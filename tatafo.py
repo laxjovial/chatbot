@@ -9,6 +9,10 @@ import datetime
 import subprocess
 import sys
 from io import BytesIO
+import os
+import os.system("pip install matplotlib")
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 import nltk
