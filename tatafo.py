@@ -22,7 +22,7 @@ from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
 from nltk import ne_chunk, pos_tag, word_tokenize
 from nltk.tree import Tree
 from difflib import get_close_matches
-st.write("🐧 Using NLTK data from:", nltk.data.path)
+
 
 # === Entity Detection ===
 def extract_named_entities(text):
