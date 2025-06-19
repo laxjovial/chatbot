@@ -6,9 +6,6 @@ services:
     buildCommand: bash build.sh
     startCommand: streamlit run chatbot_app.py --server.port $PORT
     autoDeploy: true
-    envVars:
-      - key: PORT
-        value: "10000"
   - type: web
     name: nlp-fastapi
     env: python
