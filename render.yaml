@@ -3,5 +3,5 @@ services:
     name: chatbot
     env: python
     pythonVersion: 3.10
-    buildCommand: "./build.sh"
-    startCommand: streamlit run tatafo.py
+    buildCommand: "bash build.sh"
+    startCommand: "streamlit run chatbot_app.py"
