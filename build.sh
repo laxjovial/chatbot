@@ -8,3 +8,5 @@ python3 nltk_setup.py
 
 # Now install dependencies
 pip install -r requirements.txt
+
+python -m nltk.downloader -d nltk_data punkt
