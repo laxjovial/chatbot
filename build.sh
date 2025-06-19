@@ -6,5 +6,6 @@ rm -rf nltk_data
 # Install dependencies
 pip install -r requirements.txt
 
-# Download spaCy model
-python -m spacy download en_core_web_sm
+# Download spaCy models
+python -m spacy download en_core_web_trf
+python -m spacy download xx_ent_wiki_sm
