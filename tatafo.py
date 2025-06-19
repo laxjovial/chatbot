@@ -17,7 +17,10 @@ nlp_en = spacy.load("en_core_web_trf")
 nlp_multi = spacy.load("xx_ent_wiki_sm")
 
 
-backend_url = st.sidebar.text_input("FastAPI Backend URL", value="http://localhost:8000")
+st.session_state.backend_url = st.sidebar.text_input(
+    "FastAPI Backend URL", value="https://nlp-fastapi.onrender.com"
+)
+
 # === Use FastAPI backend for named entity extraction ===
 def extract_named_entities_via_api(text):
     try:
