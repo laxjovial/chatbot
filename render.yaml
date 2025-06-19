@@ -3,5 +3,6 @@ services:
     name: chatbot
     env: python
     pythonVersion: 3.10
-    buildCommand: pip install -r requirements.txt
+    buildCommand: "./build.sh && pip install -r requirements.txt"
     startCommand: streamlit run tatafo.py
+
