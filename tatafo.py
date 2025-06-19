@@ -212,7 +212,7 @@ def generate_response(user_input, data, api_keys):
 
 # === Main Streamlit App ===
 def main():
-    ensure_nltk_data()
+    
 
     st.set_page_config(page_title="ChatBot App", layout="centered")
     st.title("Tatafo with AI 🗣️")
