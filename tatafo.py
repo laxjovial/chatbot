@@ -11,8 +11,7 @@ from langdetect import detect
 import spacy
 
 # Load spaCy models
-nlp_en = spacy.load("en_core_web_trf")
-nlp_multi = spacy.load("xx_ent_wiki_sm")
+nlp_en = spacy.load("en_core_web_sm")
 
 def extract_named_entities_via_api(text):
     try:
