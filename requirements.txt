@@ -4,6 +4,4 @@ pandas
 matplotlib
 spacy
 langdetect
-fastapi
-uvicorn
 pydantic
