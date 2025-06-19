@@ -3,6 +3,6 @@ services:
     name: tatafo
     env: python
     buildCommand: "./build.sh"
-    startCommand: "streamlit run app.py"
+    startCommand: "tatafo.py"
     plan: free
     autoDeploy: true
