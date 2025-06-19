@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Create nltk_data directory
+# Create a local directory for nltk_data
 mkdir -p nltk_data
 
-# Run nltk_setup before installing dependencies
-python3 nltk_setup.py
-
-# Now install dependencies
-pip install -r requirements.txt
-
+# Download punkt directly to nltk_data folder (no need for separate nltk_setup.py)
 python -m nltk.downloader -d nltk_data punkt
+
+# Install all Python dependencies
+pip install -r requirements.txt
