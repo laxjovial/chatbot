@@ -11,34 +11,44 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 import nltk
-import nltk
-
-
-nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
-  # Ensures it uses local path
-import nltk
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-
-from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
+from nltk.tokenize import sent_tokenize, TreebankWordTokenizer
 from nltk import ne_chunk, pos_tag, word_tokenize
 from nltk.tree import Tree
 from difflib import get_close_matches
 
+# ✅ Set custom NLTK data path (if you're deploying to services like Render)
+nltk_data_path = os.path.join(os.getcwd(), 'nltk_data')
+nltk.data.path.append(nltk_data_path)
+
+# ✅ Download 'punkt' if not already present (used by sent_tokenize)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt', download_dir=nltk_data_path)
 
 # === Entity Detection ===
 def extract_named_entities(text):
-    entities = []
+    entities = []  # This will store all detected named entities (e.g., names, places)
+
+    # Break the text into sentences using NLTK's sentence tokenizer
     for sent in nltk.sent_tokenize(text):
-        chunks = ne_chunk(pos_tag(word_tokenize(sent)))
+        
+        # Tokenize the sentence into words and tag each with its part of speech (POS)
+        tagged_words = pos_tag(word_tokenize(sent))
+        
+        # Perform Named Entity Chunking on the POS-tagged sentence
+        chunks = ne_chunk(tagged_words)
+        
+        # Iterate over the chunks to find named entities
         for chunk in chunks:
-            if isinstance(chunk, Tree):
+            if isinstance(chunk, Tree):  # If it's a named entity (Tree object)
+                # Join the words in the named entity chunk to get the full name
                 name = " ".join(c[0] for c in chunk.leaves())
-                entities.append(name)
-    return entities
+                entities.append(name)  # Add it to the list
+    
+    return entities  # Return the list of extracted named entities
 
 # === Load/Save Data ===
 def load_data():
@@ -175,11 +185,16 @@ def plot_stock_chart(df):
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
     tokens = []
-    sent_tokenizer = PunktSentenceTokenizer()
+
+    # ✅ Use the proper sent_tokenize to avoid punkt_tab issue
+    from nltk.tokenize import sent_tokenize, TreebankWordTokenizer
     word_tokenizer = TreebankWordTokenizer()
-    for sent in sent_tokenizer.tokenize(text):
+
+    # ✅ Use standard tokenizer which only needs 'punkt'
+    for sent in sent_tokenize(text):
         tokens.extend(word_tokenizer.tokenize(sent))
 
+    # ✅ Check for close matches in custom/default responses
     matched = get_close_matches(
         text,
         list(data["custom_responses"].keys()) + list(get_default_responses().keys()),
@@ -191,6 +206,7 @@ def generate_response(user_input, data, api_keys):
             return data["custom_responses"][matched[0]]
         return get_default_responses()[matched[0]]
 
+    # ✅ Route to the appropriate info source
     if "weather" in tokens:
         return get_weather(text, api_keys.get("weather"))
     elif "news" in tokens:
@@ -202,6 +218,7 @@ def generate_response(user_input, data, api_keys):
     elif any(w in tokens for w in ["ronaldo", "messi", "match", "haaland", "lebron"]):
         return get_sports_info(text, api_keys.get("sports"))
 
+    # ✅ Fallback to Wikipedia using named entity or raw input
     entities = extract_named_entities(user_input)
     if entities:
         return get_wikipedia_summary(entities[0])
