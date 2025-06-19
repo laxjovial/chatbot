@@ -17,6 +17,11 @@ import nltk
 
 nltk.data.path.append(os.path.join(os.getcwd(), 'nltk_data'))
   # Ensures it uses local path
+import nltk
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
 from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
 from nltk import ne_chunk, pos_tag, word_tokenize
