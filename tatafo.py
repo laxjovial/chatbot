@@ -5,32 +5,23 @@ import re
 import requests
 import datetime
 from io import BytesIO
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import plotly.graph_objs as go
 import pandas as pd
 from langdetect import detect
 import spacy
 
-# Load models for client-side fallback and defaults (won't do entity extraction locally now)
+# Load spaCy models
 nlp_en = spacy.load("en_core_web_trf")
 nlp_multi = spacy.load("xx_ent_wiki_sm")
 
-
-# === Use FastAPI backend for named entity extraction ===
 def extract_named_entities_via_api(text):
     try:
         lang = detect(text)
-        if lang == "en":
-            doc = nlp_en(text)
-        else:
-            doc = nlp_multi(text)
+        doc = nlp_en(text) if lang == "en" else nlp_multi(text)
         return [ent.text for ent in doc.ents]
     except:
         return []
 
-
-# === Load/Save Data ===
 def load_data():
     if os.path.exists("chatbot_data.json"):
         with open("chatbot_data.json", "r") as f:
@@ -52,7 +43,6 @@ def get_default_responses():
         "where are you learning data science": "Sail Innovation Lab."
     }
 
-# === API and Info Functions ===
 def get_weather(text, key):
     if not key:
         return "No weather API key set."
@@ -61,13 +51,11 @@ def get_weather(text, key):
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={key}&units=metric"
     try:
         res = requests.get(url).json()
-        if res.get("main"):
-            temp = res["main"]["temp"]
-            desc = res["weather"][0]["description"]
-            return f"Weather in {city.title()}: {temp}°C, {desc}"
+        temp = res["main"]["temp"]
+        desc = res["weather"][0]["description"]
+        return f"Weather in {city.title()}: {temp}°C, {desc}"
+    except:
         return f"Could not retrieve weather for {city}."
-    except Exception as e:
-        return f"Weather lookup failed: {str(e)}"
 
 def get_news(key):
     if not key:
@@ -77,23 +65,18 @@ def get_news(key):
         res = requests.get(url).json()
         articles = res.get("articles", [])[:3]
         return "\n\n".join([f"- {a['title']} ({a['source']['name']})" for a in articles])
-    except Exception as e:
-        return f"News lookup failed: {str(e)}"
+    except:
+        return "News lookup failed."
 
 def get_wikipedia_summary(query):
     try:
-        query = query.lower().strip()
-        query = re.sub(r"^(who|what|where|when|how)( is| was| are| does| do| did)?", "", query).strip()
+        query = re.sub(r"^(who|what|where|when|how)( is| was| are| does| do| did)?", "", query.lower()).strip()
         query = query if query else "Python (programming language)"
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{query.replace(' ', '_')}"
         res = requests.get(url).json()
-        if "title" in res and res["title"].lower() == "not found":
-            return f"No Wikipedia info for '{query}'."
-        if "extract" in res:
-            return res["extract"]
-        return "Wikipedia summary not found."
-    except Exception as e:
-        return f"Wikipedia lookup failed: {str(e)}"
+        return res["extract"] if "extract" in res else "Wikipedia summary not found."
+    except:
+        return "Wikipedia lookup failed."
 
 def get_crypto_price(text, key):
     if not key:
@@ -103,8 +86,7 @@ def get_crypto_price(text, key):
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={symbol.lower()}&vs_currencies=usd"
     try:
         res = requests.get(url).json()
-        price = res[symbol.lower()]["usd"]
-        return f"Current price of {symbol}: ${price}"
+        return f"Current price of {symbol}: ${res[symbol.lower()]['usd']}"
     except:
         return "Crypto lookup failed."
 
@@ -126,7 +108,6 @@ def get_sports_info(text, key):
         return "No sports API key set."
     return f"(Demo) Sports info for: {text}"
 
-# === CSV Upload & Charting ===
 def handle_csv_upload():
     uploaded_file = st.sidebar.file_uploader("Upload stock CSV", type="csv")
     if uploaded_file:
@@ -152,41 +133,25 @@ def plot_stock_chart(df):
         if start <= end:
             mask = (pd.to_datetime(df['Date']) >= start) & (pd.to_datetime(df['Date']) <= end)
             filtered = df.loc[mask]
-            fig, ax = plt.subplots()
-            ax.plot(filtered['Date'], filtered['Close'], label='Close Price')
-            ax.set_xlabel("Date")
-            ax.set_ylabel("Close Price")
-            ax.set_title("Stock Price Over Time")
-            st.pyplot(fig)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=filtered['Date'], y=filtered['Close'], mode='lines', name='Close Price'))
+            fig.update_layout(title="Stock Price Over Time", xaxis_title="Date", yaxis_title="Close Price")
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.warning("Start date must be before end date.")
 
-# === Response Generator ===
 from difflib import get_close_matches
 
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
-
-    # ✅ Use FastAPI backend to extract entities
     entities = extract_named_entities_via_api(user_input)
-
-    # ✅ Tokenize with spaCy locally for keyword checks
     doc = nlp_en(text)
     tokens = [token.text.lower() for token in doc]
 
-    # ✅ Check for close matches in custom/default responses
-    matched = get_close_matches(
-        text,
-        list(data["custom_responses"].keys()) + list(get_default_responses().keys()),
-        n=1,
-        cutoff=0.6
-    )
+    matched = get_close_matches(text, list(data["custom_responses"]) + list(get_default_responses()), n=1, cutoff=0.6)
     if matched:
-        if matched[0] in data["custom_responses"]:
-            return data["custom_responses"][matched[0]]
-        return get_default_responses()[matched[0]]
+        return data["custom_responses"].get(matched[0], get_default_responses()[matched[0]])
 
-    # ✅ Route to appropriate info source based on tokens
     if "weather" in tokens:
         return get_weather(text, api_keys.get("weather"))
     elif "news" in tokens:
@@ -198,53 +163,41 @@ def generate_response(user_input, data, api_keys):
     elif any(w in tokens for w in ["ronaldo", "messi", "match", "haaland", "lebron"]):
         return get_sports_info(text, api_keys.get("sports"))
 
-    # ✅ Use first named entity for Wikipedia summary
-    if entities:
-        return get_wikipedia_summary(entities[0])
-    return get_wikipedia_summary(user_input)
+    return get_wikipedia_summary(entities[0] if entities else user_input)
 
-# === Main Streamlit App ===
 def main():
     st.set_page_config(page_title="ChatBot App", layout="centered")
     st.title("Tatafo with AI 🗣️")
-
     st.sidebar.title("🔐 API Key Input")
-    api_keys = {}
-    data = load_data()
 
-    # Replace the old radio + >>> with a single button toggle to show API input form
+    data = load_data()
+    api_keys = {}
+
     show_api_input = st.sidebar.button("API KEY Input")
     if show_api_input:
         mode = st.sidebar.radio("Provide API keys:", ["Load from file", "Manual input", "Skip"])
         if mode == "Load from file":
-            uploaded = st.sidebar.file_uploader("Upload .txt with API keys (key=value per line)")
+            uploaded = st.sidebar.file_uploader("Upload .txt with API keys")
             if uploaded:
-                content = uploaded.read().decode("utf-8").splitlines()
-                for line in content:
+                for line in uploaded.read().decode("utf-8").splitlines():
                     if "=" in line:
                         k, v = line.strip().split("=")
                         api_keys[k.strip()] = v.strip()
                 st.sidebar.success("✅ API keys loaded.")
         elif mode == "Manual input":
-            api_keys["weather"] = st.sidebar.text_input("Weather API Key")
-            api_keys["news"] = st.sidebar.text_input("News API Key")
-            api_keys["crypto"] = st.sidebar.text_input("Crypto API Key")
-            api_keys["stock"] = st.sidebar.text_input("Stock API Key")
-            api_keys["sports"] = st.sidebar.text_input("Sports API Key")
-
+            for key in ["weather", "news", "crypto", "stock", "sports"]:
+                api_keys[key] = st.sidebar.text_input(f"{key.title()} API Key")
             if st.sidebar.button("Save to .txt"):
                 with open("api_keys.txt", "w") as f:
                     for k, v in api_keys.items():
                         f.write(f"{k}={v}\n")
                 st.sidebar.success("Saved to api_keys.txt")
-    else:
-        # If user doesn't click API input, load keys from file if exists
-        if os.path.exists("api_keys.txt"):
-            with open("api_keys.txt", "r") as f:
-                for line in f:
-                    if "=" in line:
-                        k, v = line.strip().split("=")
-                        api_keys[k.strip()] = v.strip()
+    elif os.path.exists("api_keys.txt"):
+        with open("api_keys.txt") as f:
+            for line in f:
+                if "=" in line:
+                    k, v = line.strip().split("=")
+                    api_keys[k.strip()] = v.strip()
 
     user_input = st.text_input("You:")
     if user_input:
@@ -253,7 +206,6 @@ def main():
         save_data(data)
         st.write(f"**Bot:** {response}")
 
-    # Custom response
     st.sidebar.markdown("---")
     st.sidebar.subheader("➕ Add Custom Response")
     new_key = st.sidebar.text_input("Trigger")
@@ -270,7 +222,6 @@ def main():
         st.sidebar.success("Chat history cleared.")
 
     if st.sidebar.checkbox("📓 Show Chat History"):
-        st.sidebar.markdown("---")
         for entry in data["history"]:
             st.sidebar.write(f"**You:** {entry['user']}")
             st.sidebar.write(f"**Bot:** {entry['bot']}")
@@ -281,3 +232,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
