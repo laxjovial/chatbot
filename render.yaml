@@ -1,8 +1,8 @@
 services:
   - type: web
     name: tatafo
-    env: python
+    env: python 3
     buildCommand: "./build.sh"
-    startCommand: "tatafo.py"
+    startCommand: "streamlit run tatafo.py"
     plan: free
     autoDeploy: true
