@@ -1,5 +1,3 @@
-# chatbot_app.py
-
 import streamlit as st
 import json
 import os
@@ -11,29 +9,30 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
-import os
-import spacy
-nlp = spacy.load("en_core_web_sm")  # Load spaCy's English model
-
-# === Entity Detection ===
 from langdetect import detect
 import spacy
 
-nlp_en = spacy.load("en_core_web_trf")       # English (high accuracy)
-nlp_multi = spacy.load("xx_ent_wiki_sm")     # Multilingual (basic but covers many languages)
+# Load models for client-side fallback and defaults (won't do entity extraction locally now)
+nlp_en = spacy.load("en_core_web_trf")
+nlp_multi = spacy.load("xx_ent_wiki_sm")
 
-def extract_named_entities(text):
+# === Use FastAPI backend for named entity extraction ===
+def extract_named_entities_via_api(text):
     try:
-        lang = detect(text)  # e.g., 'en', 'fr', 'de'
-        if lang == "en":
-            doc = nlp_en(text)
-        else:
-            doc = nlp_multi(text)
-        return [ent.text for ent in doc.ents]
+        # Change URL if deployed remotely; localhost for local dev
+        res = requests.post("http://localhost:8000/extract_entities", json={"text": text})
+        return res.json().get("entities", [])
     except Exception as e:
-        return []
-
-
+        # fallback: local spaCy processing if API unavailable
+        try:
+            lang = detect(text)
+            if lang == "en":
+                doc = nlp_en(text)
+            else:
+                doc = nlp_multi(text)
+            return [ent.text for ent in doc.ents]
+        except:
+            return []
 
 # === Load/Save Data ===
 def load_data():
@@ -167,11 +166,16 @@ def plot_stock_chart(df):
             st.warning("Start date must be before end date.")
 
 # === Response Generator ===
+from difflib import get_close_matches
+
 def generate_response(user_input, data, api_keys):
     text = user_input.lower().strip()
 
-    # ✅ Use spaCy for sentence and token parsing
-    doc = nlp(text)
+    # ✅ Use FastAPI backend to extract entities
+    entities = extract_named_entities_via_api(user_input)
+
+    # ✅ Tokenize with spaCy locally for keyword checks
+    doc = nlp_en(text)
     tokens = [token.text.lower() for token in doc]
 
     # ✅ Check for close matches in custom/default responses
@@ -198,46 +202,53 @@ def generate_response(user_input, data, api_keys):
     elif any(w in tokens for w in ["ronaldo", "messi", "match", "haaland", "lebron"]):
         return get_sports_info(text, api_keys.get("sports"))
 
-    # ✅ Try extracting named entities via spaCy
-    entities = extract_named_entities(user_input)
+    # ✅ Use first named entity for Wikipedia summary
     if entities:
         return get_wikipedia_summary(entities[0])
-    
     return get_wikipedia_summary(user_input)
 
 # === Main Streamlit App ===
 def main():
-    
-
     st.set_page_config(page_title="ChatBot App", layout="centered")
     st.title("Tatafo with AI 🗣️")
 
-    st.sidebar.title("🔐 API Input")
+    st.sidebar.title("🔐 API Key Input")
     api_keys = {}
     data = load_data()
 
-    mode = st.sidebar.radio("Provide API keys:", ["Load from file", "Manual input", "Skip"])
-    if mode == "Load from file":
-        uploaded = st.sidebar.file_uploader("Upload .txt with API keys (key=value per line)")
-        if uploaded:
-            content = uploaded.read().decode("utf-8").splitlines()
-            for line in content:
-                if "=" in line:
-                    k, v = line.strip().split("=")
-                    api_keys[k.strip()] = v.strip()
-            st.sidebar.success("✅ API keys loaded.")
-    elif mode == "Manual input":
-        api_keys["weather"] = st.sidebar.text_input("Weather API Key")
-        api_keys["news"] = st.sidebar.text_input("News API Key")
-        api_keys["crypto"] = st.sidebar.text_input("Crypto API Key")
-        api_keys["stock"] = st.sidebar.text_input("Stock API Key")
-        api_keys["sports"] = st.sidebar.text_input("Sports API Key")
+    # Replace the old radio + >>> with a single button toggle to show API input form
+    show_api_input = st.sidebar.button("API KEY Input")
+    if show_api_input:
+        mode = st.sidebar.radio("Provide API keys:", ["Load from file", "Manual input", "Skip"])
+        if mode == "Load from file":
+            uploaded = st.sidebar.file_uploader("Upload .txt with API keys (key=value per line)")
+            if uploaded:
+                content = uploaded.read().decode("utf-8").splitlines()
+                for line in content:
+                    if "=" in line:
+                        k, v = line.strip().split("=")
+                        api_keys[k.strip()] = v.strip()
+                st.sidebar.success("✅ API keys loaded.")
+        elif mode == "Manual input":
+            api_keys["weather"] = st.sidebar.text_input("Weather API Key")
+            api_keys["news"] = st.sidebar.text_input("News API Key")
+            api_keys["crypto"] = st.sidebar.text_input("Crypto API Key")
+            api_keys["stock"] = st.sidebar.text_input("Stock API Key")
+            api_keys["sports"] = st.sidebar.text_input("Sports API Key")
 
-        if st.sidebar.button("Save to .txt"):
-            with open("api_keys.txt", "w") as f:
-                for k, v in api_keys.items():
-                    f.write(f"{k}={v}\n")
-            st.sidebar.success("Saved to api_keys.txt")
+            if st.sidebar.button("Save to .txt"):
+                with open("api_keys.txt", "w") as f:
+                    for k, v in api_keys.items():
+                        f.write(f"{k}={v}\n")
+                st.sidebar.success("Saved to api_keys.txt")
+    else:
+        # If user doesn't click API input, load keys from file if exists
+        if os.path.exists("api_keys.txt"):
+            with open("api_keys.txt", "r") as f:
+                for line in f:
+                    if "=" in line:
+                        k, v = line.strip().split("=")
+                        api_keys[k.strip()] = v.strip()
 
     user_input = st.text_input("You:")
     if user_input:
